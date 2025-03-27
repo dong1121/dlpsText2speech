@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>文字轉語音</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2em;
+      text-align: center;
+    }
+
+    .form-row {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      margin: 0.5em auto;
+      max-width: 600px;
+    }
+
+    .form-row label {
+      flex: 0 0 180px;
+      text-align: right;
+      margin-right: 10px;
+    }
+
+    .form-row input,
+    .form-row select {
+      flex: 1;
+      padding: 0.5em;
+      font-size: 1em;
+      width: 450px;
+    }
+
+    button {
+      margin-top: 1em;
+      padding: 0.5em 2em;
+      font-size: 1.2em;
+      width: 300px;
+    }
+
+    #marquee-wrapper {
+      display: none;
+      position: fixed;
+      top: 40%;
+      left: 0;
+      width: 100%;
+      height: 120px;
+      background-color: yellow;
+      z-index: 999;
+      overflow: hidden;
+      pointer-events: none;
+      align-items: center;
+    }
+
+    #marquee {
+      font-size: 100px;
+      font-weight: bold;
+      color: black;
+      white-space: nowrap;
+      position: absolute;
+      left: 100%;
+      animation: scrollText 18s linear infinite;
+      padding: 10px 20px;
+    }
+
+    @keyframes scrollText {
+      0% {
+        left: 100%;
+      }
+      100% {
+        left: -100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h2>文字轉語音（繁體中文）</h2>
+
+  <div class="form-row">
+    <label for="textInput">請輸入文字：</label>
+    <input type="text" id="textInput" placeholder="例如：余永東老師好帥" />
+  </div>
+
+  <div class="form-row">
+    <label for="voiceSelect">選擇語音：</label>
+    <select id="voiceSelect"></select>
+  </div>
+
+  <div class="form-row">
+    <label for="marqueeTime">跑馬燈顯示時間：</label>
+    <input type="number" id="marqueeTime" min="1" value="5" />
+    <label for="marqueeTime">分鐘</label>
+  </div>
+
+  <button id="speakButton" onclick="speakText()">播放語音</button>
+
+  <div id="manualPlayNotice" style="display:none; margin-top:2em;">
+    <button onclick="speakText()" style="font-size:1.5em; padding:1em;">🔊 點我播放語音</button>
+  </div>
+
+  <div id="marquee-wrapper">
+    <div id="marquee"></div>
+  </div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTextParam = urlParams.get("text") || "";
+    const urlVoiceParam = urlParams.get("voice") || "";
+    const urlTimeParam = urlParams.get("time") || "5";
+    let voices = [];
+    let autoPlayed = false;
+
+    function populateVoiceListAndMaybePlay() {
+      const allVoices = speechSynthesis.getVoices();
+      const zhTwVoices = allVoices.filter(v => v.lang === "zh-TW");
+      if (zhTwVoices.length === 0) return;
+
+      voices = zhTwVoices;
+      const voiceSelect = document.getElementById("voiceSelect");
+      voiceSelect.innerHTML = "";
+
+      zhTwVoices.forEach((voice, index) => {
+        const option = document.createElement("option");
+        option.textContent = `${index + 1}. ${voice.name}`;
+        option.value = index;
+        voiceSelect.appendChild(option);
+      });
+
+      if (urlTextParam) {
+        document.getElementById("textInput").value = decodeURIComponent(urlTextParam);
+      }
+
+      const voiceParam = parseInt(urlVoiceParam);
+      if (!isNaN(voiceParam) && zhTwVoices[voiceParam - 1]) {
+        document.getElementById("voiceSelect").value = voiceParam - 1;
+      }
+
+      const timeParam = parseInt(urlTimeParam);
+      if (!isNaN(timeParam) && timeParam > 0) {
+        document.getElementById("marqueeTime").value = timeParam;
+      }
+
+      if (!autoPlayed && urlTextParam && !isNaN(voiceParam)) {
+        autoPlayed = true;
+        setTimeout(() => {
+          console.log("自動模擬播放語音");
+          speakText();
+        }, 800);
+      }
+    }
+
+    function speakText() {
+      const text = document.getElementById("textInput").value;
+      const voiceIndex = document.getElementById("voiceSelect").value;
+      const marqueeDuration = parseInt(document.getElementById("marqueeTime").value || 5);
+
+      if (!text) {
+        alert("請輸入一些文字！");
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.voice = voices[voiceIndex];
+      utterance.lang = "zh-TW";
+      utterance.rate = 0.9;
+
+      speechSynthesis.cancel();
+
+      try {
+        speechSynthesis.speak(utterance);
+        let spoke = false;
+
+        utterance.onstart = () => {
+          spoke = true;
+          showMarquee(text, marqueeDuration);
+        };
+
+        utterance.onend = () => {
+          console.log("語音播放結束");
+        };
+
+        setTimeout(() => {
+          if (!spoke) {
+            showManualPlayButton();
+          }
+        }, 1000);
+      } catch (err) {
+        console.error("播放失敗：", err);
+        showManualPlayButton();
+      }
+    }
+
+    function showMarquee(text, duration) {
+      const marqueeWrapper = document.getElementById("marquee-wrapper");
+      const marquee = document.getElementById("marquee");
+      marquee.textContent = text;
+      marqueeWrapper.style.display = "flex";
+
+      setTimeout(() => {
+        marqueeWrapper.style.display = "none";
+      }, duration * 60 * 1000);
+    }
+
+    function showManualPlayButton() {
+      document.getElementById("manualPlayNotice").style.display = "block";
+    }
+
+    window.onload = () => {
+      let attempts = 0;
+      const interval = setInterval(() => {
+        if (speechSynthesis.getVoices().length > 0 || attempts > 10) {
+          clearInterval(interval);
+          populateVoiceListAndMaybePlay();
+        }
+        attempts++;
+      }, 300);
+
+      speechSynthesis.onvoiceschanged = populateVoiceListAndMaybePlay;
+    };
+  </script>
+</body>
+</html>
