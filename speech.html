@@ -75,7 +75,7 @@
   </style>
 </head>
 <body>
-  <h2>文字轉語音（繁體中文）</h2>
+  <h2>斗六國小文字轉語音廣播系統</h2>
 
   <div class="form-row">
     <label for="textInput">請輸入文字：</label>
@@ -163,6 +163,8 @@
     }
 
     function speakText() {
+      document.getElementById('manualPlayNotice').style.display = 'none'; //一點就隱藏按鈕
+      
       const text = document.getElementById("textInput").value;
       const voiceIndex = document.getElementById("voiceSelect").value;
       const marqueeDuration = parseInt(document.getElementById("marqueeTime").value || 5);
