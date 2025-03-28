@@ -9,7 +9,6 @@
       padding: 2em;
       text-align: center;
     }
-
     .form-row {
       display: flex;
       justify-content: flex-start;
@@ -17,13 +16,11 @@
       margin: 0.5em auto;
       max-width: 600px;
     }
-
     .form-row label {
       flex: 0 0 180px;
       text-align: right;
       margin-right: 10px;
     }
-
     .form-row input,
     .form-row select {
       flex: 1;
@@ -31,14 +28,12 @@
       font-size: 1em;
       width: 450px;
     }
-
     button {
       margin-top: 1em;
       padding: 0.5em 2em;
       font-size: 1.2em;
       width: 300px;
     }
-
     #marquee-wrapper {
       display: none;
       position: fixed;
@@ -52,7 +47,6 @@
       pointer-events: none;
       align-items: center;
     }
-
     #marquee {
       font-size: 100px;
       font-weight: bold;
@@ -63,161 +57,136 @@
       animation: scrollText 18s linear infinite;
       padding: 10px 20px;
     }
-
     @keyframes scrollText {
-      0% {
-        left: 100%;
-      }
-      100% {
-        left: -100%;
-      }
+      0% { left: 100%; }
+      100% { left: -100%; }
+    }
+    #manualPlayNotice button {
+      font-size: 2em;
+      padding: 1em 2em;
+      background-color: #ff5722;
+      color: white;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+      transition: transform 0.2s, background-color 0.3s;
+    }
+    #manualPlayNotice button:hover {
+      background-color: #e64a19;
+      transform: scale(1.05);
     }
   </style>
 </head>
 <body>
-  <h2>斗六國小文字轉語音廣播系統</h2>
-
+  <h2>文字轉語音（繁體中文）</h2>
   <div class="form-row">
     <label for="textInput">請輸入文字：</label>
     <input type="text" id="textInput" placeholder="例如：余永東老師好帥" />
   </div>
-
   <div class="form-row">
     <label for="voiceSelect">選擇語音：</label>
     <select id="voiceSelect"></select>
   </div>
-
   <div class="form-row">
     <label for="marqueeTime">跑馬燈顯示時間：</label>
     <input type="number" id="marqueeTime" min="1" value="5" />
     <label for="marqueeTime">分鐘</label>
   </div>
-
   <button id="speakButton" onclick="speakText()">播放語音</button>
-
   <div id="manualPlayNotice" style="display:none; margin-top:2em;">
-  <button onclick="speakText()" style="
-    font-size: 2em;
-    padding: 1em 2em;
-    background-color: #ff5722;
-    color: white;
-    border: none;
-    border-radius: 20px;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-    transition: transform 0.2s, background-color 0.3s;
-  ">
-    🔊 點我播放語音
-  </button>
+    <button onclick="speakText()">🔊 點我播放語音</button>
   </div>
-
   <div id="marquee-wrapper">
     <div id="marquee"></div>
   </div>
-
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlTextParam = urlParams.get("text") || "";
-    const urlVoiceParam = urlParams.get("voice") || "";
-    const urlTimeParam = urlParams.get("time") || "5";
+    function getQueryParam(name) {
+      const regex = new RegExp('[?&]' + name + '=([^&#]*)');
+      const results = regex.exec(window.location.search);
+      return results ? decodeURIComponent(results[1].replace(/\+/g, ' ')) : '';
+    }
+
+    const urlTextParam = getQueryParam('text');
+    const urlVoiceParam = parseInt(getQueryParam('voice'));
+    const urlTimeParam = parseInt(getQueryParam('time')) || 5;
     let voices = [];
     let autoPlayed = false;
 
     function populateVoiceListAndMaybePlay() {
       const allVoices = speechSynthesis.getVoices();
-      const zhTwVoices = allVoices.filter(v => v.lang === "zh-TW");
-      if (zhTwVoices.length === 0) return;
+      const zhVoices = allVoices.filter(v => v.lang.includes('zh'));
+      if (zhVoices.length === 0) return;
 
-      voices = zhTwVoices;
-      const voiceSelect = document.getElementById("voiceSelect");
-      voiceSelect.innerHTML = "";
-
-      zhTwVoices.forEach((voice, index) => {
-        const option = document.createElement("option");
+      voices = zhVoices;
+      const voiceSelect = document.getElementById('voiceSelect');
+      voiceSelect.innerHTML = '';
+      zhVoices.forEach((voice, index) => {
+        const option = document.createElement('option');
         option.textContent = `${index + 1}. ${voice.name}`;
         option.value = index;
         voiceSelect.appendChild(option);
       });
 
       if (urlTextParam) {
-        document.getElementById("textInput").value = decodeURIComponent(urlTextParam);
+        document.getElementById('textInput').value = urlTextParam;
       }
-
-      const voiceParam = parseInt(urlVoiceParam);
-      if (!isNaN(voiceParam) && zhTwVoices[voiceParam - 1]) {
-        document.getElementById("voiceSelect").value = voiceParam - 1;
+      if (!isNaN(urlVoiceParam) && zhVoices[urlVoiceParam - 1]) {
+        document.getElementById('voiceSelect').value = urlVoiceParam - 1;
       }
+      document.getElementById('marqueeTime').value = urlTimeParam;
 
-      const timeParam = parseInt(urlTimeParam);
-      if (!isNaN(timeParam) && timeParam > 0) {
-        document.getElementById("marqueeTime").value = timeParam;
-      }
-
-      if (!autoPlayed && urlTextParam && !isNaN(voiceParam)) {
+      if (!autoPlayed && urlTextParam && !isNaN(urlVoiceParam)) {
         autoPlayed = true;
-        setTimeout(() => {
-          console.log("自動模擬播放語音");
-          speakText();
-        }, 800);
+        setTimeout(() => speakText(), 800);
       }
     }
 
     function speakText() {
-      document.getElementById('manualPlayNotice').style.display = 'none'; //一點就隱藏按鈕
-      
-      const text = document.getElementById("textInput").value;
-      const voiceIndex = document.getElementById("voiceSelect").value;
-      const marqueeDuration = parseInt(document.getElementById("marqueeTime").value || 5);
+      document.getElementById('manualPlayNotice').style.display = 'none';
 
-      if (!text) {
-        alert("請輸入一些文字！");
+      const text = document.getElementById('textInput').value;
+      const voiceIndex = document.getElementById('voiceSelect').value;
+      const duration = parseInt(document.getElementById('marqueeTime').value || 5);
+
+      if (!text || !voices[voiceIndex]) {
+        alert('⚠️ 無法播放語音，請確認語音裝置是否支援。');
         return;
       }
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.voice = voices[voiceIndex];
-      utterance.lang = "zh-TW";
+      utterance.lang = voices[voiceIndex].lang;
       utterance.rate = 0.9;
 
       speechSynthesis.cancel();
-
       try {
         speechSynthesis.speak(utterance);
         let spoke = false;
-
         utterance.onstart = () => {
           spoke = true;
-          showMarquee(text, marqueeDuration);
+          showMarquee(text, duration);
         };
-
-        utterance.onend = () => {
-          console.log("語音播放結束");
-        };
-
+        utterance.onend = () => console.log('語音播放結束');
         setTimeout(() => {
-          if (!spoke) {
-            showManualPlayButton();
-          }
+          if (!spoke) showManualPlayButton();
         }, 1000);
       } catch (err) {
-        console.error("播放失敗：", err);
+        console.error(err);
         showManualPlayButton();
       }
     }
 
     function showMarquee(text, duration) {
-      const marqueeWrapper = document.getElementById("marquee-wrapper");
-      const marquee = document.getElementById("marquee");
+      const wrapper = document.getElementById('marquee-wrapper');
+      const marquee = document.getElementById('marquee');
       marquee.textContent = text;
-      marqueeWrapper.style.display = "flex";
-
-      setTimeout(() => {
-        marqueeWrapper.style.display = "none";
-      }, duration * 60 * 1000);
+      wrapper.style.display = 'flex';
+      setTimeout(() => wrapper.style.display = 'none', duration * 60000);
     }
 
     function showManualPlayButton() {
-      document.getElementById("manualPlayNotice").style.display = "block";
+      document.getElementById('manualPlayNotice').style.display = 'block';
     }
 
     window.onload = () => {
@@ -229,7 +198,6 @@
         }
         attempts++;
       }, 300);
-
       speechSynthesis.onvoiceschanged = populateVoiceListAndMaybePlay;
     };
   </script>
