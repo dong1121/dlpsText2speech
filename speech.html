@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -84,6 +83,9 @@
       background-color: #e64a19;
       transform: scale(1.05);
     }
+	#speakButton {
+	  font-family: 'DFKai', sans-serif;
+	}
   </style>
 </head>
 <body>
@@ -103,7 +105,7 @@
   </div>
   <button id="speakButton" onclick="speakText()">播放語音</button>
   <div id="manualPlayNotice" style="display:none; margin-top:2em;">
-    <button onclick="speakText()">🔊 點我播放語音</button>
+    <button onclick="speakText()">🔊 點我播放語音和文字跑馬燈</button>
   </div>
   <div id="marquee-wrapper">
     <div id="marquee"></div>
